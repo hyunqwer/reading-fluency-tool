@@ -71,7 +71,7 @@
     const levelSelect = document.getElementById("levelSelect");
 
     const texts = {
-      A1: "This is a cat. The cat is black. It likes to sleep and play.",
+      A1: "This is a cat. The cat is black!",
       A2: "Anna goes to school every day. She walks with her friend and they talk a lot.",
       B1: "The museum was very interesting. I learned many things about ancient history and art.",
       B2: "Although the weather was bad, we decided to go hiking because we had prepared everything.",
@@ -127,35 +127,27 @@
       const original = textInput.value.trim().split(/\s+/);
       const spoken = transcript.trim().split(/\s+/);
 
-      const lcsMatrix = Array(original.length + 1)
-        .fill(null)
-        .map(() => Array(spoken.length + 1).fill(0));
+      // 구두점 제거 + 소문자 처리 함수
+      const clean = (word) => word.toLowerCase().replace(/[.,!?—-]/g, "");
 
-      for (let i = 1; i <= original.length; i++) {
-        for (let j = 1; j <= spoken.length; j++) {
-          if (original[i - 1].toLowerCase() === spoken[j - 1].toLowerCase()) {
-            lcsMatrix[i][j] = lcsMatrix[i - 1][j - 1] + 1;
-          } else {
-            lcsMatrix[i][j] = Math.max(lcsMatrix[i - 1][j], lcsMatrix[i][j - 1]);
+      const lowerOriginal = original.map(clean);
+      const lowerSpoken = spoken.map(clean);
+
+      const matchedIndexes = new Set();
+      const usedSpokenIndexes = new Set();
+
+      // 순차 매칭, 중복 단어 1회만 허용
+      for (let i = 0; i < lowerOriginal.length; i++) {
+        for (let j = 0; j < lowerSpoken.length; j++) {
+          if (!usedSpokenIndexes.has(j) && lowerOriginal[i] === lowerSpoken[j]) {
+            matchedIndexes.add(i);
+            usedSpokenIndexes.add(j);
+            break;
           }
         }
       }
 
-      let i = original.length;
-      let j = spoken.length;
-      const matchedIndexes = new Set();
-      while (i > 0 && j > 0) {
-        if (original[i - 1].toLowerCase() === spoken[j - 1].toLowerCase()) {
-          matchedIndexes.add(i - 1);
-          i--;
-          j--;
-        } else if (lcsMatrix[i - 1][j] > lcsMatrix[i][j - 1]) {
-          i--;
-        } else {
-          j--;
-        }
-      }
-
+      // 시각 피드백 생성
       const result = original.map((word, idx) => {
         const isCorrect = matchedIndexes.has(idx);
         return `<span class="word ${isCorrect ? "correct" : "incorrect"}">${word}</span>`;
@@ -163,6 +155,7 @@
 
       outputText.innerHTML = result.join(" ");
 
+      // 시간 및 속도 계산
       const duration = (endTime - startTime) / 1000;
       const wpm = (spoken.length / duration) * 60;
       const wcpm = (matchedIndexes.size / duration) * 60;
