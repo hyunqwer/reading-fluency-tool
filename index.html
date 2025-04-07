@@ -1,4 +1,54 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Fluency Analyzer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+    }
+    .word.correct {
+      color: green;
+      font-weight: bold;
+    }
+    .word.incorrect {
+      color: red;
+      font-weight: bold;
+    }
+    .results {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Reading Fluency Analyzer</h1>
+
+  <label for="textInput">📝 읽을 텍스트를 입력하세요:</label>
+  <textarea id="textInput">The quick brown fox jumps over the lazy dog.</textarea>
+
+  <div>
+    <button id="startBtn">Start Reading</button>
+    <button id="stopBtn" disabled>Stop Reading</button>
+  </div>
+
+  <div class="results">
+    <h2>📣 음성 인식 결과:</h2>
+    <div id="outputText"></div>
+
+    <h3>📊 분석 결과</h3>
+    <p>읽은 시간: <span id="duration"></span>초</p>
+    <p>WPM: <span id="wpm"></span></p>
+    <p>WCPM: <span id="wcpm"></span></p>
+  </div>
+
+  <script>
   let recognition;
   let startTime, endTime;
   let transcript = "";
@@ -72,3 +122,9 @@
     wcpmDisplay.textContent = wcpm.toFixed(1);
   }
 </script>
+</body>
+</html>
+
+
+
+
