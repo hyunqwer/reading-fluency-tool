@@ -1,103 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Reading Fluency (Whisper)</title>
-  <style>
-    textarea { width: 100%; height: 100px; }
-    .word.correct { color: green; font-weight: bold; }
-    .word.incorrect { color: red; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h1>Reading Fluency Analyzer with Whisper</h1>
+<script>
+  let recognition;
+  let startTime, endTime;
+  let transcript = "";
 
-  <textarea id="textInput">The quick brown fox jumps over the lazy dog.</textarea>
-  <br />
-  <button id="startBtn">Start Recording</button>
-  <button id="stopBtn" disabled>Stop Recording</button>
-  <p>Duration: <span id="duration">0</span> seconds</p>
-  <p>WPM: <span id="wpm">0</span></p>
-  <p>WCPM: <span id="wcpm">0</span></p>
+  if ("webkitSpeechRecognition" in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true; // 긴 발화 가능
+    recognition.interimResults = false; // 중간 결과 무시
+    recognition.lang = "en-US";
 
-  <h3>Speech Recognition Result:</h3>
-  <div id="outputText">[Result will appear here]</div>
-
-  <script>
-    let mediaRecorder;
-    let audioChunks = [];
-    let startTime, endTime;
-
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const durationDisplay = document.getElementById("duration");
-    const wpmDisplay = document.getElementById("wpm");
-    const wcpmDisplay = document.getElementById("wcpm");
-    const outputText = document.getElementById("outputText");
-
-    startBtn.onclick = async () => {
-      audioChunks = [];
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-      startTime = new Date();
-
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
+    recognition.onstart = () => {
+      transcript = ""; // 초기화
+      outputText.innerHTML = "🎙️ 음성 인식 중입니다. 발화를 마친 후 Stop을 눌러주세요...";
     };
 
-    stopBtn.onclick = async () => {
-      endTime = new Date();
-      mediaRecorder.stop();
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        const file = new File([audioBlob], "speech.webm", { type: "audio/webm" });
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("model", "whisper-1");
-        formData.append("response_format", "text");
-        formData.append("language", "en");
-
-        const openaiApiKey = "YOUR_OPENAI_API_KEY"; // ← 여기에 본인의 OpenAI API 키 입력
-
-        const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openaiApiKey}`
-          },
-          body: formData
-        });
-
-        const transcript = await response.text();
-        analyze(transcript);
-      };
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
+    recognition.onresult = function (event) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          transcript += event.results[i][0].transcript + " ";
+        }
+      }
     };
 
-    function analyze(transcript) {
-      const original = document.getElementById("textInput").value.trim().split(/\\s+/);
-      const spoken = transcript.trim().split(/\\s+/);
-      let correct = 0;
+    recognition.onerror = function (event) {
+      alert("STT 오류 발생: " + event.error);
+    };
 
-      const result = original.map((word, i) => {
-        const spokenWord = spoken[i] || "";
-        const match = word.toLowerCase() === spokenWord.toLowerCase();
-        if (match) correct++;
-        return `<span class=\"word ${match ? "correct" : "incorrect"}\">${word}</span>`;
-      });
+    recognition.onend = () => {
+      analyzeResults(); // 인식 종료 후 분석 실행
+    };
+  } else {
+    alert("Web Speech API를 지원하지 않는 브라우저입니다.");
+  }
 
-      outputText.innerHTML = result.join(" ");
+  startBtn.onclick = () => {
+    startTime = new Date();
+    recognition.start();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+  };
 
-      const duration = (endTime - startTime) / 1000;
-      durationDisplay.textContent = duration.toFixed(1);
-      wpmDisplay.textContent = ((spoken.length / duration) * 60).toFixed(1);
-      wcpmDisplay.textContent = ((correct / duration) * 60).toFixed(1);
-    }
-  </script>
-</body>
-</html>
+  stopBtn.onclick = () => {
+    endTime = new Date();
+    recognition.stop(); // stop → onend → analyzeResults 실행됨
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  };
+
+  function analyzeResults() {
+    const original = textInput.value.trim().split(/\\s+/);
+    const spoken = transcript.trim().split(/\\s+/);
+
+    let correct = 0;
+    const result = original.map((word, i) => {
+      const spokenWord = spoken[i] || "";
+      const match = word.toLowerCase() === spokenWord.toLowerCase();
+      if (match) correct++;
+      return `<span class="word ${match ? "correct" : "incorrect"}">${word}</span>`;
+    });
+
+    outputText.innerHTML = result.join(" ");
+
+    const duration = (endTime - startTime) / 1000;
+    const totalWords = spoken.length;
+
+    const wpm = (totalWords / duration) * 60;
+    const wcpm = (correct / duration) * 60;
+
+    durationDisplay.textContent = duration.toFixed(1);
+    wpmDisplay.textContent = wpm.toFixed(1);
+    wcpmDisplay.textContent = wcpm.toFixed(1);
+  }
+</script>
