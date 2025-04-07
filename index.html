@@ -49,82 +49,75 @@
   </div>
 
   <script>
-  let recognition;
-  let startTime, endTime;
-  let transcript = "";
+    const textInput = document.getElementById("textInput");
+    const outputText = document.getElementById("outputText");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const wpmDisplay = document.getElementById("wpm");
+    const wcpmDisplay = document.getElementById("wcpm");
+    const durationDisplay = document.getElementById("duration");
 
-  if ("webkitSpeechRecognition" in window) {
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = true; // 긴 발화 가능
-    recognition.interimResults = false; // 중간 결과 무시
-    recognition.lang = "en-US";
+    let recognition;
+    let startTime, endTime;
+    let transcript = "";
 
-    recognition.onstart = () => {
-      transcript = ""; // 초기화
-      outputText.innerHTML = "🎙️ 음성 인식 중입니다. 발화를 마친 후 Stop을 눌러주세요...";
+    if ("webkitSpeechRecognition" in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onresult = function (event) {
+        transcript = event.results[0][0].transcript;
+        analyzeResults();
+      };
+
+      recognition.onerror = function (event) {
+        alert("STT 오류 발생: " + event.error);
+      };
+    } else {
+      alert("Web Speech API를 지원하지 않는 브라우저입니다.");
+    }
+
+    startBtn.onclick = () => {
+      startTime = new Date();
+      recognition.start();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      outputText.innerHTML = "음성 인식 중...";
     };
 
-    recognition.onresult = function (event) {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          transcript += event.results[i][0].transcript + " ";
-        }
-      }
+    stopBtn.onclick = () => {
+      endTime = new Date();
+      recognition.stop();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
     };
 
-    recognition.onerror = function (event) {
-      alert("STT 오류 발생: " + event.error);
-    };
+    function analyzeResults() {
+      const original = textInput.value.trim().split(/\s+/);
+      const spoken = transcript.trim().split(/\s+/);
 
-    recognition.onend = () => {
-      analyzeResults(); // 인식 종료 후 분석 실행
-    };
-  } else {
-    alert("Web Speech API를 지원하지 않는 브라우저입니다.");
-  }
+      let correct = 0;
+      const result = original.map((word, i) => {
+        const spokenWord = spoken[i] || "";
+        const match = word.toLowerCase() === spokenWord.toLowerCase();
+        if (match) correct++;
+        return `<span class="word ${match ? "correct" : "incorrect"}">${word}</span>`;
+      });
 
-  startBtn.onclick = () => {
-    startTime = new Date();
-    recognition.start();
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-  };
+      outputText.innerHTML = result.join(" ");
 
-  stopBtn.onclick = () => {
-    endTime = new Date();
-    recognition.stop(); // stop → onend → analyzeResults 실행됨
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-  };
+      const duration = (endTime - startTime) / 1000;
+      const totalWords = spoken.length;
 
-  function analyzeResults() {
-    const original = textInput.value.trim().split(/\\s+/);
-    const spoken = transcript.trim().split(/\\s+/);
+      const wpm = (totalWords / duration) * 60;
+      const wcpm = (correct / duration) * 60;
 
-    let correct = 0;
-    const result = original.map((word, i) => {
-      const spokenWord = spoken[i] || "";
-      const match = word.toLowerCase() === spokenWord.toLowerCase();
-      if (match) correct++;
-      return `<span class="word ${match ? "correct" : "incorrect"}">${word}</span>`;
-    });
-
-    outputText.innerHTML = result.join(" ");
-
-    const duration = (endTime - startTime) / 1000;
-    const totalWords = spoken.length;
-
-    const wpm = (totalWords / duration) * 60;
-    const wcpm = (correct / duration) * 60;
-
-    durationDisplay.textContent = duration.toFixed(1);
-    wpmDisplay.textContent = wpm.toFixed(1);
-    wcpmDisplay.textContent = wcpm.toFixed(1);
-  }
-</script>
+      durationDisplay.textContent = duration.toFixed(1);
+      wpmDisplay.textContent = wpm.toFixed(1);
+      wcpmDisplay.textContent = wcpm.toFixed(1);
+    }
+  </script>
 </body>
 </html>
-
-
-
-
