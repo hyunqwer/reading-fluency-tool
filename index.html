@@ -25,6 +25,18 @@
     .results {
       margin-top: 20px;
     }
+    #micStatus {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-left: 10px;
+      background-color: gray;
+    }
+    #difficultWords {
+      margin-top: 10px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -47,6 +59,7 @@
   <div>
     <button id="startBtn">Start Reading</button>
     <button id="stopBtn" disabled>Stop Reading</button>
+    <span>🎤 마이크 상태:</span><span id="micStatus"></span>
   </div>
 
   <div class="results">
@@ -57,6 +70,7 @@
     <p>읽은 시간: <span id="duration"></span>초</p>
     <p>WPM: <span id="wpm"></span></p>
     <p>WCPM: <span id="wcpm"></span></p>
+    <p id="difficultWords">발음 주의 단어: 없음</p>
   </div>
 
   <script>
@@ -68,6 +82,8 @@
     const wpmDisplay = document.getElementById("wpm");
     const wcpmDisplay = document.getElementById("wcpm");
     const durationDisplay = document.getElementById("duration");
+    const micStatus = document.getElementById("micStatus");
+    const difficultWordsDisplay = document.getElementById("difficultWords");
 
     const levelTexts = {
       A1: "My name is Tom. I like apples and bananas. I have a dog. It is small and white. I go to school every day.",
@@ -86,38 +102,60 @@
     let recognition;
     let startTime, endTime;
     let transcript = "";
+    let isReading = false;
 
     if ("webkitSpeechRecognition" in window) {
       recognition = new webkitSpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
       recognition.lang = "en-US";
 
       recognition.onresult = function (event) {
-        transcript = event.results[0][0].transcript;
-        analyzeResults();
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            transcript += event.results[i][0].transcript + " ";
+          }
+        }
+        outputText.innerHTML = "음성 인식 중...";
       };
 
       recognition.onerror = function (event) {
-        alert("STT 오류 발생: " + event.error);
+        console.error("STT 오류 발생: ", event.error);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          alert("마이크 접근이 차단되었습니다.");
+        }
+      };
+
+      recognition.onend = function () {
+        if (isReading) {
+          recognition.start(); // 자동 재시작
+        }
+        micStatus.style.backgroundColor = "gray";
       };
     } else {
       alert("Web Speech API를 지원하지 않는 브라우저입니다.");
     }
 
     startBtn.onclick = () => {
+      transcript = "";
       startTime = new Date();
+      isReading = true;
       recognition.start();
+      micStatus.style.backgroundColor = "red"; // 마이크 ON 표시
       startBtn.disabled = true;
       stopBtn.disabled = false;
       outputText.innerHTML = "음성 인식 중...";
+      difficultWordsDisplay.textContent = "발음 주의 단어: 없음";
     };
 
     stopBtn.onclick = () => {
       endTime = new Date();
+      isReading = false;
       recognition.stop();
+      micStatus.style.backgroundColor = "gray";
       startBtn.disabled = false;
       stopBtn.disabled = true;
+      analyzeResults();
     };
 
     function analyzeResults() {
@@ -125,10 +163,16 @@
       const spoken = transcript.trim().split(/\s+/);
 
       let correct = 0;
+      let wordErrorMap = {};
+
       const result = original.map((word, i) => {
         const spokenWord = spoken[i] || "";
         const match = word.toLowerCase() === spokenWord.toLowerCase();
-        if (match) correct++;
+        if (match) {
+          correct++;
+        } else {
+          wordErrorMap[word] = (wordErrorMap[word] || 0) + 1;
+        }
         return `<span class="word ${match ? "correct" : "incorrect"}">${word}</span>`;
       });
 
@@ -136,13 +180,22 @@
 
       const duration = (endTime - startTime) / 1000;
       const totalWords = spoken.length;
-
       const wpm = (totalWords / duration) * 60;
       const wcpm = (correct / duration) * 60;
 
       durationDisplay.textContent = duration.toFixed(1);
       wpmDisplay.textContent = wpm.toFixed(1);
       wcpmDisplay.textContent = wcpm.toFixed(1);
+
+      // 발음 주의 단어 정렬 및 표시
+      const sortedErrors = Object.entries(wordErrorMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([word, count]) => `${word} (${count})`);
+
+      difficultWordsDisplay.textContent =
+        sortedErrors.length > 0
+          ? "발음 주의 단어: " + sortedErrors.join(", ")
+          : "발음 주의 단어: 없음";
     }
   </script>
 </body>
