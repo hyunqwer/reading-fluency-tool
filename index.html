@@ -33,10 +33,6 @@
       margin-left: 10px;
       background-color: gray;
     }
-    #difficultWords {
-      margin-top: 10px;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
@@ -70,7 +66,6 @@
     <p>읽은 시간: <span id="duration"></span>초</p>
     <p>WPM: <span id="wpm"></span></p>
     <p>WCPM: <span id="wcpm"></span></p>
-    <p id="difficultWords">발음 주의 단어: 없음</p>
   </div>
 
   <script>
@@ -83,7 +78,6 @@
     const wcpmDisplay = document.getElementById("wcpm");
     const durationDisplay = document.getElementById("duration");
     const micStatus = document.getElementById("micStatus");
-    const difficultWordsDisplay = document.getElementById("difficultWords");
 
     const levelTexts = {
       A1: "My name is Tom. I like apples and bananas. I have a dog. It is small and white. I go to school every day.",
@@ -116,7 +110,6 @@
             transcript += event.results[i][0].transcript + " ";
           }
         }
-        outputText.innerHTML = "음성 인식 중...";
       };
 
       recognition.onerror = function (event) {
@@ -141,11 +134,10 @@
       startTime = new Date();
       isReading = true;
       recognition.start();
-      micStatus.style.backgroundColor = "red"; // 마이크 ON 표시
+      micStatus.style.backgroundColor = "red";
       startBtn.disabled = true;
       stopBtn.disabled = false;
       outputText.innerHTML = "음성 인식 중...";
-      difficultWordsDisplay.textContent = "발음 주의 단어: 없음";
     };
 
     stopBtn.onclick = () => {
@@ -163,20 +155,19 @@
       const spoken = transcript.trim().split(/\s+/);
 
       let correct = 0;
-      let wordErrorMap = {};
 
       const result = original.map((word, i) => {
         const spokenWord = spoken[i] || "";
         const match = word.toLowerCase() === spokenWord.toLowerCase();
-        if (match) {
-          correct++;
-        } else {
-          wordErrorMap[word] = (wordErrorMap[word] || 0) + 1;
-        }
+        if (match) correct++;
         return `<span class="word ${match ? "correct" : "incorrect"}">${word}</span>`;
       });
 
-      outputText.innerHTML = result.join(" ");
+      if (result.length > 0) {
+        outputText.innerHTML = result.join(" ");
+      } else {
+        outputText.innerHTML = "<em>음성 인식 결과가 없습니다.</em>";
+      }
 
       const duration = (endTime - startTime) / 1000;
       const totalWords = spoken.length;
@@ -186,16 +177,6 @@
       durationDisplay.textContent = duration.toFixed(1);
       wpmDisplay.textContent = wpm.toFixed(1);
       wcpmDisplay.textContent = wcpm.toFixed(1);
-
-      // 발음 주의 단어 정렬 및 표시
-      const sortedErrors = Object.entries(wordErrorMap)
-        .sort((a, b) => b[1] - a[1])
-        .map(([word, count]) => `${word} (${count})`);
-
-      difficultWordsDisplay.textContent =
-        sortedErrors.length > 0
-          ? "발음 주의 단어: " + sortedErrors.join(", ")
-          : "발음 주의 단어: 없음";
     }
   </script>
 </body>
