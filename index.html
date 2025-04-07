@@ -30,6 +30,17 @@
 <body>
   <h1>Reading Fluency Analyzer</h1>
 
+  <label for="levelSelect">🧠 CEFR 수준을 선택하세요:</label>
+  <select id="levelSelect">
+    <option value="A1">A1 - 초급</option>
+    <option value="A2">A2 - 초중급</option>
+    <option value="B1">B1 - 중급</option>
+    <option value="B2">B2 - 중상급</option>
+    <option value="C1">C1 - 고급</option>
+    <option value="C2">C2 - 최상급</option>
+  </select>
+
+  <br /><br />
   <label for="textInput">📝 읽을 텍스트를 입력하세요:</label>
   <textarea id="textInput">The quick brown fox jumps over the lazy dog.</textarea>
 
@@ -49,6 +60,7 @@
   </div>
 
   <script>
+    const levelSelect = document.getElementById("levelSelect");
     const textInput = document.getElementById("textInput");
     const outputText = document.getElementById("outputText");
     const startBtn = document.getElementById("startBtn");
@@ -56,6 +68,20 @@
     const wpmDisplay = document.getElementById("wpm");
     const wcpmDisplay = document.getElementById("wcpm");
     const durationDisplay = document.getElementById("duration");
+
+    const levelTexts = {
+      A1: "My name is Tom. I like apples and bananas. I have a dog. It is small and white. I go to school every day.",
+      A2: "Sally goes to the park every Sunday. She takes her bike and rides with her friends. After playing, they eat ice cream and talk about school.",
+      B1: "David is planning a trip to London. He has never been there before, so he is very excited. He wants to visit museums, walk by the river, and try traditional English food.",
+      B2: "Technology has changed how we live and work. Many people now use smartphones to check emails, attend meetings, and even do their shopping. This has made life more convenient, but also more stressful.",
+      C1: "Climate change poses a serious threat to our planet. Rising temperatures, melting ice caps, and extreme weather events are becoming more common. Governments must take immediate action to reduce carbon emissions and invest in renewable energy.",
+      C2: "Philosophical debates surrounding consciousness continue to challenge modern science. While some argue for a materialist perspective, others believe consciousness transcends physical explanation. These discussions not only shape our understanding of the mind, but also inform ethics, identity, and artificial intelligence."
+    };
+
+    levelSelect.onchange = () => {
+      const selectedLevel = levelSelect.value;
+      textInput.value = levelTexts[selectedLevel];
+    };
 
     let recognition;
     let startTime, endTime;
